@@ -20,11 +20,7 @@ async def wind_comparison(
     end_date: date = Query(default=DEFAULT_END_DATE),
     cutoff_hours_before: int = Query(default=1, ge=0, le=48),
 ):
-    """Compare actual wind generation with the forecast known ahead of time.
-
-    ``cutoff_hours_before`` controls how far ahead of each delivery day the
-    chosen forecast must have been published.
-    """
+    """Compare actual wind generation with the forecast known ahead of time."""
     ensure_valid_date_range(start_date, end_date)
 
     # The two Elexon calls are independent, so fetch them concurrently.

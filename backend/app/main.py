@@ -1,11 +1,4 @@
-"""FastAPI application entrypoint for the UK Wind Forecast Portal.
-
-Responsibilities of this module:
-* create the application and configure CORS,
-* mount the route modules,
-* translate Elexon/network failures into a single, consistent 502 response
-  so individual routes do not need their own ``try/except`` blocks.
-"""
+"""FastAPI application entrypoint for the UK Wind Forecast Portal."""
 
 import httpx
 from fastapi import FastAPI, Request

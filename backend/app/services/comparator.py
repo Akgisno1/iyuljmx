@@ -7,19 +7,9 @@ def compare_actuals_and_forecasts(
     actuals: list[dict],
     selected_forecasts: dict[str, float],
 ) -> dict:
-    """Pair each actual reading with its forecast and summarise the error.
+    """Pair each actual with its forecast and summarise the error.
 
-    Only slots that exist in both datasets are compared.
-
-    Args:
-        actuals: Raw FUELHH rows (``startTime`` + ``generation``).
-        selected_forecasts: Output of
-            :func:`app.services.forecast_selector.select_day_ahead_forecasts`.
-
-    Returns:
-        A dict with the mean absolute error (MW), the number of compared
-        slots, and one row per slot containing actual, forecast and error
-        where ``error = forecast - actual``.
+    ``error = forecast - actual``; slots missing from either side are skipped.
     """
     comparisons: list[dict] = []
     absolute_errors: list[float] = []
@@ -46,7 +36,6 @@ def compare_actuals_and_forecasts(
             }
         )
 
-    # Avoid dividing by zero when nothing could be matched.
     mean_absolute_error = (
         round(sum(absolute_errors) / len(absolute_errors), 1)
         if absolute_errors

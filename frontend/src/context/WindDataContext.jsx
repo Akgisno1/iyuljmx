@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 
 const WindDataContext = createContext(null);
 
@@ -9,6 +9,8 @@ export function WindDataProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
+  const [updatedAt, setUpdatedAt] = useState(null);
+  const [refreshToken, setRefreshToken] = useState(0);
   const [dateRange, setDateRange] = useState({
     from: JAN_2026_START,
     to: JAN_2026_END,
@@ -18,24 +20,29 @@ export function WindDataProvider({ children }) {
     to: "2026-01-31",
   });
 
-  return (
-    <WindDataContext.Provider
-      value={{
-        loading,
-        setLoading,
-        data,
-        setData,
-        error,
-        setError,
-        dateRange,
-        setDateRange,
-        fetchedRange,
-        setFetchedRange,
-      }}
-    >
-      {children}
-    </WindDataContext.Provider>
+  const refresh = useCallback(() => setRefreshToken((token) => token + 1), []);
+
+  const value = useMemo(
+    () => ({
+      loading,
+      setLoading,
+      data,
+      setData,
+      error,
+      setError,
+      updatedAt,
+      setUpdatedAt,
+      dateRange,
+      setDateRange,
+      fetchedRange,
+      setFetchedRange,
+      refresh,
+      refreshToken,
+    }),
+    [loading, data, error, updatedAt, dateRange, fetchedRange, refresh, refreshToken]
   );
+
+  return <WindDataContext.Provider value={value}>{children}</WindDataContext.Provider>;
 }
 
 export function useWindData() {

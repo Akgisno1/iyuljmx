@@ -1,14 +1,4 @@
-"""Client for the Elexon BMRS API.
-
-Only two datasets are needed by the portal:
-
-* ``FUELHH``  - half-hourly generation by fuel type (we use wind actuals).
-* ``WINDFOR`` - wind generation forecasts, each row carrying the time it was
-  published so we can pick the "day ahead" forecast.
-
-Both endpoints share the same request/response plumbing, which lives in
-:func:`_stream_dataset`.
-"""
+"""Client for the Elexon BMRS API (FUELHH actuals, WINDFOR forecasts)."""
 
 from datetime import date, datetime, time, timedelta
 
@@ -22,12 +12,7 @@ from app.config import (
 
 
 async def _stream_dataset(dataset: str, params: dict, timeout: float) -> list[dict]:
-    """Fetch a streaming dataset from Elexon and return its records as a list.
-
-    Raises ``httpx.HTTPStatusError`` for 4xx/5xx responses and
-    ``httpx.RequestError`` for connection problems; the API layer turns both
-    into a 502 for the caller.
-    """
+    """Fetch a streaming dataset and return its records as a list."""
     url = f"{ELEXON_BASE_URL}/datasets/{dataset}/stream"
 
     async with httpx.AsyncClient(timeout=timeout) as client:
@@ -36,8 +21,7 @@ async def _stream_dataset(dataset: str, params: dict, timeout: float) -> list[di
 
     payload = response.json()
 
-    # `/stream` normally returns a bare list, but some responses wrap the
-    # records in a {"data": [...]} envelope. Accept both shapes.
+    # `/stream` returns either a bare list or a {"data": [...]} envelope.
     if isinstance(payload, list):
         return payload
     if isinstance(payload, dict):
@@ -59,11 +43,7 @@ async def get_wind_actuals(start_date: date, end_date: date) -> list[dict]:
 
 
 async def get_wind_forecasts(start_date: date, end_date: date) -> list[dict]:
-    """Return wind generation forecasts published around the date range.
-
-    Forecasts can be published a couple of days before the period they
-    describe, so the publish window starts two days before ``start_date``.
-    """
+    """Return forecasts published from two days before ``start_date`` onwards."""
     publish_from = (
         datetime.combine(start_date, time.min) - timedelta(days=2)
     ).strftime("%Y-%m-%dT00:00:00Z")

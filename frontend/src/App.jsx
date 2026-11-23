@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import RightSide from "@/components/RightSide";
 import {
@@ -7,62 +7,86 @@ import {
   WindDataProvider,
   useWindData,
 } from "@/context/WindDataContext";
+import { isoDay } from "@/lib/wind";
+import { getTab, tabFromHash } from "@/lib/tabs";
 
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:8000").replace(
   /\/+$/,
   ""
 );
 
-function formatIsoDate(dt) {
-  const y = dt.getFullYear();
-  const m = String(dt.getMonth() + 1).padStart(2, "0");
-  const d = String(dt.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
 function WindShell() {
-  const [activeTab, setActiveTab] = useState("overview");
-  const { setLoading, setData, setError, dateRange, setFetchedRange } =
-    useWindData();
+  const [activeTab, setActiveTab] = useState(() => tabFromHash(window.location.hash));
+  const {
+    setLoading,
+    setData,
+    setError,
+    setUpdatedAt,
+    dateRange,
+    setFetchedRange,
+    refreshToken,
+  } = useWindData();
 
-  const startIso = formatIsoDate(dateRange?.from || JAN_2026_START);
-  const endIso = formatIsoDate(dateRange?.to || dateRange?.from || JAN_2026_END);
+  const startIso = isoDay(dateRange?.from || JAN_2026_START);
+  const endIso = isoDay(dateRange?.to || dateRange?.from || JAN_2026_END);
+
+  // Keep the URL in step with the visible tab so a link can be shared/reloaded.
+  useEffect(() => {
+    if (window.location.hash !== `#/${activeTab}`) {
+      window.history.replaceState(null, "", `#/${activeTab}`);
+    }
+    document.title = `${getTab(activeTab).label} · UK Wind Forecast Portal`;
+  }, [activeTab]);
 
   useEffect(() => {
-    let active = true;
+    const onHashChange = () => setActiveTab(tabFromHash(window.location.hash));
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
 
     async function fetchComparison() {
       setLoading(true);
       setError("");
       try {
         const res = await fetch(
-          `${API_URL}/comparison/wind?start_date=${startIso}&end_date=${endIso}`
+          `${API_URL}/comparison/wind?start_date=${startIso}&end_date=${endIso}`,
+          { signal: controller.signal }
         );
-        if (!res.ok) throw new Error(`Request failed (${res.status})`);
+        if (!res.ok) {
+          const body = await res.json().catch(() => null);
+          throw new Error(body?.detail || `Request failed (${res.status})`);
+        }
         const json = await res.json();
-        if (active) {
+        if (!controller.signal.aborted) {
           setData(json);
           setFetchedRange({ from: startIso, to: endIso });
+          setUpdatedAt(new Date());
         }
       } catch (err) {
-        if (active) {
-          setError(err instanceof Error ? err.message : "Failed to load data");
-        }
+        if (err?.name === "AbortError") return;
+        setError(
+          err instanceof Error && err.message
+            ? err.message
+            : "Could not load wind data from the API."
+        );
       } finally {
-        if (active) setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     }
 
     fetchComparison();
-    return () => {
-      active = false;
-    };
-  }, [startIso, endIso, setLoading, setData, setError, setFetchedRange]);
+    return () => controller.abort();
+  }, [startIso, endIso, refreshToken, setLoading, setData, setError, setFetchedRange, setUpdatedAt]);
+
+  const tab = useMemo(() => getTab(activeTab), [activeTab]);
 
   return (
-    <main className="fixed inset-0 flex h-screen w-screen overflow-hidden bg-zinc-950 text-zinc-100">
+    <main className="fixed inset-0 flex h-screen w-screen overflow-hidden bg-background">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-      <RightSide activeTab={activeTab} />
+      <RightSide activeTab={activeTab} setActiveTab={setActiveTab} tab={tab} />
     </main>
   );
 }

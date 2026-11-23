@@ -11,18 +11,8 @@ def select_day_ahead_forecasts(
 ) -> dict[str, float]:
     """Return the latest forecast per slot that was published far enough ahead.
 
-    A forecast counts as "day ahead" for a slot when it was published at least
-    ``cutoff_hours_before`` hours before midnight UTC of the day the slot
-    belongs to. When several qualifying forecasts exist for the same slot, the
-    most recently published one wins.
-
-    Args:
-        forecasts: Raw WINDFOR rows from Elexon.
-        cutoff_hours_before: How many hours before the delivery day the
-            forecast must have been published. ``0`` accepts any forecast.
-
-    Returns:
-        Mapping of naive-UTC slot timestamp (ISO string) to generation in MW.
+    A forecast qualifies when it was published at least ``cutoff_hours_before``
+    hours before midnight UTC of the slot's day; ties go to the newest publish.
     """
     latest_publish_by_slot: dict[str, datetime] = {}
     selected: dict[str, float] = {}
