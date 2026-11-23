@@ -1,57 +1,64 @@
-import logging
-import os
-import time
+"""FastAPI application entrypoint for the UK Wind Forecast Portal.
 
+Responsibilities of this module:
+* create the application and configure CORS,
+* mount the route modules,
+* translate Elexon/network failures into a single, consistent 502 response
+  so individual routes do not need their own ``try/except`` blocks.
+"""
+
+import httpx
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(message)s",
+from app.api.routes.actuals import router as actuals_router
+from app.api.routes.comparison import router as comparison_router
+from app.api.routes.forecasts import router as forecasts_router
+from app.config import ALLOWED_ORIGIN_REGEX, ALLOWED_ORIGINS
+
+app = FastAPI(
+    title="UK Wind Forecast Portal",
+    description="Wind generation actuals, forecasts and day-ahead forecast accuracy.",
+    version="1.0.0",
 )
-logger = logging.getLogger("wind.api")
-
-app = FastAPI(title="Wind Forecast Portal")
-
-# Local dev origins plus any Vercel preview/production domain.
-# Extra origins can be added with a comma-separated ALLOWED_ORIGINS env var.
-allowed_origins = [
-    origin.strip()
-    for origin in os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
-    if origin.strip()
-]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=ALLOWED_ORIGIN_REGEX,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+app.include_router(actuals_router)
+app.include_router(forecasts_router)
+app.include_router(comparison_router)
 
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    """One log line per API call, visible in the Vercel runtime logs."""
-    started = time.perf_counter()
-    try:
-        response = await call_next(request)
-    except Exception:
-        logger.exception("FAILED %s %s", request.method, request.url.path)
-        raise
 
-    duration_ms = (time.perf_counter() - started) * 1000
-    logger.info(
-        "%s %s -> %d (%.1f ms) origin=%s",
-        request.method,
-        request.url.path,
-        response.status_code,
-        duration_ms,
-        request.headers.get("origin", "-"),
+@app.exception_handler(httpx.HTTPStatusError)
+async def elexon_status_error_handler(
+    request: Request, exc: httpx.HTTPStatusError
+) -> JSONResponse:
+    """Report an upstream Elexon HTTP error (4xx/5xx) as a 502 Bad Gateway."""
+    return JSONResponse(
+        status_code=502,
+        content={"detail": f"Elexon returned HTTP {exc.response.status_code}"},
     )
-    return response
 
 
-@app.get("/api/health")
+@app.exception_handler(httpx.RequestError)
+async def elexon_connection_error_handler(
+    request: Request, exc: httpx.RequestError
+) -> JSONResponse:
+    """Report a network/timeout failure while calling Elexon as a 502."""
+    return JSONResponse(
+        status_code=502,
+        content={"detail": "Could not connect to the Elexon API"},
+    )
+
+
+@app.get("/health", tags=["health"])
 def health() -> dict[str, str]:
+    """Simple liveness probe used by hosting platforms and uptime checks."""
     return {"status": "ok"}
