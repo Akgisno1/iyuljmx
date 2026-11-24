@@ -143,8 +143,8 @@ The UI is composed directly from shadcn primitives (`Card`, `Button`, `Tabs`, `C
 ### Docker (one command)
 
 ```bash
-git clone https://github.com/Akgisno1/uk-wind-dashboard.git
-cd uk-wind-dashboard
+git clone https://github.com/Akgisno1/iyuljmx.git
+cd iyuljmx
 docker compose up --build
 ```
 
@@ -243,9 +243,7 @@ AI also found real bugs during those passes — items arriving newest-first so t
 - Ran the app, compared the numbers against the API by hand, and worked through the error paths (bad dates, Elexon down).
 - Wrote the final README structure and the review notes, and confirmed the figures quoted here.
 
-### Honest limitations of this approach
 
-AI-generated code fails quietly in ways a reviewer has to catch: plausible-looking metrics with the wrong sign, date handling that is right in one timezone, aggregations that silently drop unmatched slots. The mitigation used here was constant verification against the real payload, not trust in the output. The remaining gap is automated tests — the calculations in `src/lib/wind.js` and the forecast-selection rule are exactly what a unit-test suite should pin down next.
 
 ### Tools
 
