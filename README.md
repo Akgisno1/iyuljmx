@@ -2,7 +2,7 @@
 
 A pilot analysis of **day-ahead wind forecast accuracy** for Great Britain, built for the January 2026 window. The portal pairs every metered half-hourly wind output reading with the forecast that was actually available the day before, then shows where the forecast missed, which way it missed, and what that miss would have cost in backup capacity.
 
-- **Frontend:** https://uk-wind-dashboard-rhyi.vercel.app
+- **Frontend:** https://uk-wind-dashboard-1km7.vercel.app/
 - **Backend API:** https://uk-wind-dashboard-ochre.vercel.app
 - **API docs (Swagger):** https://uk-wind-dashboard-ochre.vercel.app/docs
 - **Health check:** https://uk-wind-dashboard-ochre.vercel.app/health

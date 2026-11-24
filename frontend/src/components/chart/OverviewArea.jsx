@@ -32,7 +32,7 @@ import {
 
 const chartConfig = {
   actual: { label: "Delivered", color: "#059669" },
-  forecast: { label: "Day-ahead forecast", color: "#64748b" },
+  forecast: { label: "Forecast", color: "#64748b" },
 };
 
 function LegendItem({ color, label }) {
@@ -163,16 +163,20 @@ export function OverviewArea() {
                 content={
                   <ChartTooltipContent
                     indicator="dot"
-                    labelFormatter={(value) =>
-                      resolution === "day"
-                        ? new Date(Number(value)).toLocaleDateString("en-GB", {
+                    labelFormatter={(_value, payload) => {
+                      // The numeric x axis hands the formatter a series label,
+                      // so read the timestamp off the hovered row instead.
+                      const t = payload?.[0]?.payload?.t;
+                      if (t == null) return "";
+                      return resolution === "day"
+                        ? new Date(t).toLocaleDateString("en-GB", {
                             weekday: "short",
                             day: "2-digit",
                             month: "short",
                             timeZone: "UTC",
                           })
-                        : `${fmtDayTime(Number(value))} UTC`
-                    }
+                        : `${fmtDayTime(t)} UTC`;
+                    }}
                   />
                 }
               />
@@ -185,6 +189,7 @@ export function OverviewArea() {
                 stroke="#059669"
                 strokeWidth={2}
                 activeDot={{ r: 3, strokeWidth: 0 }}
+                isAnimationActive={false}
               />
 
               <Line
@@ -195,6 +200,7 @@ export function OverviewArea() {
                 strokeDasharray="4 3"
                 dot={false}
                 activeDot={{ r: 3, strokeWidth: 0 }}
+                isAnimationActive={false}
               />
             </ComposedChart>
           </ChartContainer>

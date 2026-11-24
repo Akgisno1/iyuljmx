@@ -26,7 +26,7 @@ function presetRange(days) {
 }
 
 export default function Sidebar({ activeTab, setActiveTab }) {
-  const { dateRange, setDateRange, fetchedRange, data, loading } = useWindData();
+  const { dateRange, setDateRange, data, loading } = useWindData();
   const stats = coverage(data?.items);
 
   const activePreset =
@@ -50,18 +50,6 @@ export default function Sidebar({ activeTab, setActiveTab }) {
             Day-ahead accuracy
           </p>
         </div>
-      </div>
-
-      <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-        <span
-          className={cn(
-            "h-1.5 w-1.5 rounded-full",
-            loading ? "bg-amber-500" : "bg-emerald-500"
-          )}
-        />
-        <span className="truncate tabular-nums">
-          {fetchedRange.from} → {fetchedRange.to}
-        </span>
       </div>
 
       <nav className="mt-6">

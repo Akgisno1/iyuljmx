@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { cn } from "cn";
 import KpiCard from "@/components/KpiCard";
+import { ErrorArea } from "@/components/chart/ErrorArea";
 import { ReserveCurve } from "@/components/chart/ReserveCurve";
 import {
   Card,
@@ -48,6 +49,8 @@ export default function ErrorRisk() {
 
   return (
     <div className="space-y-4">
+      <ErrorArea />
+
       <div className="grid gap-4 sm:grid-cols-3">
         <KpiCard
           label="Cover for 90% of periods"

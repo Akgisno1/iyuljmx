@@ -83,19 +83,6 @@ export const fmtDayTime = (ms) =>
     timeZone: "UTC",
   });
 
-export const fmtAxis = (ms) => {
-  const date = new Date(ms);
-  const hour = date.getUTCHours();
-  const minute = date.getUTCMinutes();
-  return hour === 0 && minute === 0
-    ? date.toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        timeZone: "UTC",
-      })
-    : fmtHour(ms);
-};
-
 /** "2026-01-01" -> "01 Jan" without timezone surprises. */
 export function isoDayLabel(iso) {
   const [y, m, d] = String(iso).split("-").map(Number);
@@ -240,14 +227,6 @@ export function worstDays(items, count = 6) {
     .slice(0, count);
 }
 
-function niceStep(value) {
-  if (!Number.isFinite(value) || value <= 0) return 500;
-  const power = Math.pow(10, Math.floor(Math.log10(value)));
-  const scaled = value / power;
-  const factor = scaled <= 1 ? 1 : scaled <= 2 ? 2 : scaled <= 2.5 ? 2.5 : scaled <= 5 ? 5 : 10;
-  return factor * power;
-}
-
 /**
  * Shortfall exposure: how many MW of cover each share of periods needs.
  *
@@ -276,29 +255,31 @@ export function shortfallStats(items) {
   };
 }
 
+const SHORTFALL_BANDS = [
+  { label: "0–0.5", min: 0, max: 500 },
+  { label: "0.5–1", min: 500, max: 1000 },
+  { label: "1–2", min: 1000, max: 2000 },
+  { label: "2–3", min: 2000, max: 3000 },
+  { label: "3–4", min: 3000, max: 4000 },
+  { label: "4+", min: 4000, max: Infinity },
+];
+
 /**
- * Coverage curve for the reserve chart: for each cover level in MW, the share
- * of settlement periods it would have fully covered.
+ * Settlement periods grouped by how much cover each one needed, so the shape of
+ * the tail is visible instead of hidden behind a cumulative curve.
  */
-export function shortfallCurve(items) {
-  const shortfalls = (items || [])
-    .map((row) => Math.max(0, row.error ?? 0))
-    .sort((a, b) => a - b);
-  if (!shortfalls.length) return [];
+export function shortfallBands(items) {
+  const shortfalls = (items || []).map((row) => Math.max(0, row.error ?? 0));
+  const n = shortfalls.length;
 
-  const peak = shortfalls[shortfalls.length - 1];
-  const step = niceStep(peak / 20);
-  const points = [];
-
-  for (let cover = 0; cover <= peak; cover += step) {
-    const covered = shortfalls.filter((value) => value <= cover).length;
-    points.push({
-      cover,
-      coveredPct: Number(((covered / shortfalls.length) * 100).toFixed(1)),
-    });
-  }
-
-  return points;
+  return SHORTFALL_BANDS.map(({ label, min, max }) => {
+    const count = shortfalls.filter((value) => value >= min && value < max).length;
+    return {
+      label,
+      count,
+      share: n ? (count / n) * 100 : 0,
+    };
+  });
 }
 
 const WIND_LEVELS = [
